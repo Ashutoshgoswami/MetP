@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hourly Weather Forecast</title>
+  <style>
+    body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 0;
+        background-color: #f4f4f4;
+    }
+    .container {
+        max-width: 800px;
+        margin: 20px auto;
+        text-align: center;
+        background-color: #fff;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    }
+    h1 {
+        color: #333;
+    }
+    input[type="text"], button {
+        padding: 10px;
+        font-size: 16px;
+        width: 70%;
+        border-radius: 5px;
+        margin-bottom: 10px;
+    }
+    input[type="text"] {
+        border: 1px solid #ccc;
+    }
+    button {
+        cursor: pointer;
+        background-color: #007bff;
+        color: #fff;
+        border: none;
+        transition: background-color 0.3s ease;
+    }
+    button:hover {
+        background-color: #0056b3;
+    }
+    #weather-info {
+        margin-top: 20px;
+    }
+    canvas {
+        width: 100%;
+        max-width: 700px;
+        margin-top: 20px;
+    }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <div class="container">
+    <h1>Hourly Weather Forecast</h1>
+    <input type="text" id="cityInput" placeholder="Enter city name">
+    <button onclick="searchWeather()">Search</button>
+    <button onclick="getLocation()">Use My Location</button>
+    <div id="weather-info"></div>
+    <canvas id="temperatureChart"></canvas>
+    <canvas id="rainChart"></canvas>
+    <canvas id="humidityChart"></canvas>
+    <canvas id="windSpeedChart"></canvas>
+    <canvas id="thunderstormChart"></canvas>
+  </div>
+
+  <script>
+    function searchWeather() {
+      const city = document.getElementById("cityInput").value;
+      getWeatherData(city);
+    }
+
+    function getWeatherData(location) {
+      const apiKey = "fcac888d541149bcabe62e93c304cd29"; // Replace with your actual API Key
+      let apiUrl;
+
+      if (typeof location === 'string') {
+         ;
+      }
+
+      fetch(apiUrl)
+        .then(response => response.json())
+        .then(data => {
+          if (data.data) {
+            displayWeather(data.data);
+          } else {
+            console.error('No weather data available:', data.error);
+          }
+        })
+        .catch(error => {
+          console.error('Error fetching weather data:', error);
+        });
+    }
+
+    function displayWeather(hourlyData) {
+      const weatherInfo = document.getElementById("weather-info");
+      weatherInfo.innerHTML = 'Weather data for the next 12 hours.';
+
+      createChart('temperatureChart', generateHourLabels(hourlyData.length), hourlyData.map(hour => hour.temp), 'Hourly Temperature');
+      createChart('rainChart', generateHourLabels(hourlyData.length), hourlyData.map(hour => hour.precip), 'Hourly Rainfall');
+      createChart('humidityChart', generateHourLabels(hourlyData.length), hourlyData.map(hour => hour.rh), 'Hourly Humidity');
+      createChart('windSpeedChart', generateHourLabels(hourlyData.length), hourlyData.map(hour => hour.wind_spd), 'Hourly Wind Speed');
+      createChart('thunderstormChart', generateHourLabels(hourlyData.length), hourlyData.map(hour => calculateThunderstormChance(hour.weather.description, hour.rh, hour.precip)), 'Hourly Thunderstorm Probability');
+    }
+
+    function generateHourLabels(numHours) {
+      const now = new Date();
+      const labels = [];
+      for (let i = 0; i < numHours; i++) {
+        const nextHour = new Date(now.getTime() + i * 3600000);
+        labels.push(`${nextHour.getHours()}:00`);
+      }
+      return labels;
+    }
+
+    function calculateThunderstormChance(description, humidity, pop) {
+      if (description.toLowerCase().includes('thunderstorm') || (humidity > 75 && pop > 0.5)) {
+        return 100;
+      } else if (humidity > 60 && pop > 0.3) {
+        return 50;
+      } else {
+        return 0;
+      }
+    }
+
+    function createChart(canvasId, labels, data, label) {
+      const ctx = document.getElementById(canvasId).getContext('2d');
+      new Chart(ctx, {
+        type: 'line',  // Changed to line for better visibility over hours
+        data: {
+          labels: labels,
+          datasets: [{
+            label: label,
+            data: data,
+            fill: false,
+            borderColor: 'rgba(54, 162, 235, 1)',
+            tension: 0.1
+          }]
+        },
+        options: {
+          scales: {
+            y: {
+              beginAtZero: true
+            }
+          }
+        }
+      });
+    }
+
+    function getLocation() {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          position => {
+            const location = { latitude: position.coords.latitude, longitude: position.coords.longitude };
+            getWeatherData(location);
+          },
+          error => {
+            console.error('Error getting user location:', error.message);
+          }
+        );
+      } else {
+        console.error("Geolocation is not supported by this browser.");
+      }
+    }
+  </script>
+</body>
+</html>
